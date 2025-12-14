@@ -15,6 +15,13 @@
 │   ├── umbrella_scaler.pkl     # Объект для нормализации данных
 │   └── model_columns.pkl       # Список признаков для обучения
 │
+├── 📁 assets/                  #Скриншоты приложения
+│   ├── Screenshot1.png         
+│   ├── Screenshot2.png
+│   ├── Screenshot3.png    
+│   └── Screenshot4.png     
+│
+│
 ├── 📁 templates/               # Frontend
 │   └── index.html              # Основной файл интерфейса (Glassmorphism + Animations)
 │
@@ -87,6 +94,13 @@ python app.py
 - Web Framework: Flask
 - Frontend: HTML5, CSS3 (Advanced Animations), Vanilla JS
 - External API: Open-Meteo  
+
+---
+
+!(assets/Screenshot1.png)
+!(assets/Screenshot2.png)
+!(assets/Screenshot3.png)
+!(assets/Screenshot4.png)
 
 ---
 **✨ Автор**  
