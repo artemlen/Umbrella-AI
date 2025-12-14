@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Зонт-Бот 3000</title>
+    <style>
+        /* --- СТИЛИ (CSS) --- */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            display: flex;
+            justify_content: center;
+            align-items: center;
+            overflow: hidden;
+            transition: background 1s ease;
+            background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%); /* Солнечный фон по умолчанию */
+        }
+
+        /* Фон для дождя */
+        body.rainy {
+            background: linear-gradient(to bottom, #203a43, #2c5364);
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.85);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            width: 350px;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s;
+        }
+
+        h1 { margin: 0 0 20px 0; color: #333; }
+        
+        input {
+            padding: 12px;
+            width: 70%;
+            border-radius: 25px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+            outline: none;
+        }
+
+        button {
+            padding: 12px 20px;
+            border-radius: 25px;
+            border: none;
+            background: #ff6b6b;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            margin-left: 5px;
+            transition: background 0.3s;
+        }
+        button:hover { background: #ee5253; }
+
+        .result-box {
+            margin-top: 30px;
+            display: none; /* Скрыто по умолчанию */
+        }
+
+        .temp { font-size: 48px; font-weight: bold; color: #333; }
+        .city-name { font-size: 20px; color: #666; margin-bottom: 10px; }
+        .message { font-size: 18px; margin-top: 10px; font-weight: bold; }
+        
+        /* Иконки статуса */
+        .icon { font-size: 60px; margin: 10px 0; }
+        
+        /* Анимация Дождя */
+        .rain-drop {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.6);
+            width: 2px;
+            height: 15px;
+            top: -20px;
+            animation: fall linear infinite;
+        }
+
+        @keyframes fall {
+            to { transform: translateY(105vh); }
+        }
+
+        /* Анимация Солнца */
+        .sun-ray {
+            position: absolute;
+            top: -100px; right: -100px;
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, rgba(255,255,200,0.8) 0%, rgba(255,255,255,0) 70%);
+            animation: spin 20s linear infinite;
+            pointer-events: none;
+        }
+        @keyframes spin { 
+            from { transform: rotate(0deg); } to { transform: rotate(360deg); } 
+        }
+
+    </style>
+</head>
+<body id="mainBody">
+
+    <!-- Солнечный луч -->
+    <div class="sun-ray" id="sunRay"></div>
+    
+    <!-- Контейнер для капель дождя -->
+    <div id="rainContainer"></div>
+
+    <div class="card">
+        <h1>🌤️ Брать ли зонт?</h1>
+        <div>
+            <input type="text" id="cityInput" placeholder="Введите город..." value="Moscow">
+            <button onclick="checkWeather()">🔍</button>
+        </div>
+
+        <div class="result-box" id="resultBox">
+            <div class="city-name" id="cityName">Москва</div>
+            <div class="icon" id="weatherIcon">☀️</div>
+            <div class="temp"><span id="tempVal">0</span>°C</div>
+            <div class="message" id="messageText">Загрузка...</div>
+            <p style="font-size: 14px; color: #777;">Вероятность дождя: <span id="probVal">0</span>%</p>
+        </div>
+    </div>
+
+    <script>
+        // --- ЛОГИКА (JavaScript) ---
+        
+        async function checkWeather() {
+            const city = document.getElementById('cityInput').value;
+            const btn = document.querySelector('button');
+            const resultBox = document.getElementById('resultBox');
+            
+            // Анимация загрузки
+            btn.textContent = "⏳";
+            btn.disabled = true;
+
+            try {
+                // Запрос к нашему Flask серверу
+                const response = await fetch(`/predict?city=${city}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                // Обновляем данные на странице
+                document.getElementById('cityName').textContent = data.city;
+                document.getElementById('tempVal').textContent = data.temp;
+                document.getElementById('probVal').textContent = data.prob;
+                
+                resultBox.style.display = 'block';
+
+                // Меняем состояние (Дождь vs Солнце)
+                setWeatherState(data.rain_predicted, data.desc);
+
+            } catch (error) {
+                alert("Ошибка соединения с сервером");
+            } finally {
+                btn.textContent = "🔍";
+                btn.disabled = false;
+            }
+        }
+
+        function setWeatherState(isRaining, desc) {
+            const body = document.getElementById('mainBody');
+            const rainContainer = document.getElementById('rainContainer');
+            const sunRay = document.getElementById('sunRay');
+            const icon = document.getElementById('weatherIcon');
+            const msg = document.getElementById('messageText');
+
+            msg.textContent = desc;
+
+            if (isRaining) {
+                // РЕЖИМ ДОЖДЯ
+                body.classList.add('rainy');
+                sunRay.style.display = 'none';
+                icon.textContent = '☔';
+                msg.style.color = '#4a69bd';
+                createRain(); // Запускаем анимацию капель
+            } else {
+                // РЕЖИМ СОЛНЦА
+                body.classList.remove('rainy');
+                sunRay.style.display = 'block';
+                icon.textContent = '☀️';
+                msg.style.color = '#e58e26';
+                clearRain(); // Убираем капли
+            }
+        }
+
+        // Функция создания капель дождя
+        let rainInterval;
+        function createRain() {
+            clearRain();
+            const container = document.getElementById('rainContainer');
+            
+            rainInterval = setInterval(() => {
+                const drop = document.createElement('div');
+                drop.classList.add('rain-drop');
+                drop.style.left = Math.random() * 100 + "vw"; // Случайная позиция
+                drop.style.animationDuration = Math.random() * 0.5 + 0.5 + "s"; // Случайная скорость
+                drop.style.opacity = Math.random();
+                
+                container.appendChild(drop);
+
+                // Удаляем каплю, когда она упала, чтобы не перегружать память
+                setTimeout(() => {
+                    drop.remove();
+                }, 1000);
+            }, 50); // Частота появления капель
+        }
+
+        function clearRain() {
+            clearInterval(rainInterval);
+            document.getElementById('rainContainer').innerHTML = '';
+        }
+    </script>
+</body>
+</html>
