@@ -97,10 +97,10 @@ python app.py
 
 ---
 
-!(assets/Screenshot1.png)
-!(assets/Screenshot2.png)
-!(assets/Screenshot3.png)
-!(assets/Screenshot4.png)
+![Скриншот 1](/assets/Screenshot1.png)
+![Скриншот 2](/assets/Screenshot2.png)
+![Скриншот 3](/assets/Screenshot3.png)
+![Скриншот 4](/assets/Screenshot4.png)
 
 ---
 **✨ Автор**  
