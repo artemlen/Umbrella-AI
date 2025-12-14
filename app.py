@@ -6,16 +6,18 @@ import requests
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
 
-# --- ЗАГРУЗКА МОДЕЛИ (Как и раньше) ---
+# --- ЗАГРУЗКА МОДЕЛИ ---
 try:
-    model = joblib.load('umbrella_model.pkl')
-    scaler = joblib.load('umbrella_scaler.pkl')
-    model_columns = joblib.load('model_columns.pkl')
+    # Добавляем папку models/ перед именем файла
+    model = joblib.load('models/umbrella_model.pkl')
+    scaler = joblib.load('models/umbrella_scaler.pkl')
+    model_columns = joblib.load('models/model_columns.pkl')
+    print("✅ Модели загружены из папки models/")
 except FileNotFoundError:
-    print("❌ Ошибка: Файлы модели не найдены.")
+    print("❌ ОШИБКА: Файлы не найдены в папке models/.")
     exit()
 
-# --- ФУНКЦИИ ПОГОДЫ (Как и раньше) ---
+# --- ФУНКЦИИ ПОГОДЫ ---
 def degrees_to_cardinal(d):
     dirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
             "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]

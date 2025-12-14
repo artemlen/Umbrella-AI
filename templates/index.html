@@ -3,219 +3,341 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Зонт-Бот 3000</title>
+    <title>UmbrellaAI</title>
     <style>
-        /* --- СТИЛИ (CSS) --- */
+        /* --- 1. ФОН --- */
         body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0; padding: 0;
+            font-family: 'Segoe UI', sans-serif;
             height: 100vh;
             display: flex;
-            justify_content: center;
+            justify-content: center;
             align-items: center;
             overflow: hidden;
-            transition: background 1s ease;
-            background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%); /* Солнечный фон по умолчанию */
+            transition: background 1.5s ease;
+            background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%);
         }
+        body.stormy { background: linear-gradient(to bottom, #1e3c72, #2a5298); }
+        body.snowy { background: linear-gradient(to bottom, #83a4d4, #b6fbff); }
 
-        /* Фон для дождя */
-        body.rainy {
-            background: linear-gradient(to bottom, #203a43, #2c5364);
-        }
-
-        .card {
-            background: rgba(255, 255, 255, 0.85);
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            text-align: center;
-            width: 350px;
-            z-index: 10;
-            backdrop-filter: blur(10px);
-            transition: transform 0.3s;
-        }
-
-        h1 { margin: 0 0 20px 0; color: #333; }
-        
-        input {
-            padding: 12px;
-            width: 70%;
-            border-radius: 25px;
-            border: 1px solid #ddd;
-            font-size: 16px;
-            outline: none;
-        }
-
-        button {
-            padding: 12px 20px;
-            border-radius: 25px;
-            border: none;
-            background: #ff6b6b;
-            color: white;
-            font-size: 16px;
+        /* --- 2. ЖИДКОЕ СТЕКЛО --- */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+            width: 360px; text-align: center;
+            position: relative; z-index: 50; overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
             cursor: pointer;
-            margin-left: 5px;
-            transition: background 0.3s;
-        }
-        button:hover { background: #ee5253; }
-
-        .result-box {
-            margin-top: 30px;
-            display: none; /* Скрыто по умолчанию */
+            /* Исправляет дергание текста при анимации */
+            backface-visibility: hidden; transform-style: preserve-3d;
         }
 
-        .temp { font-size: 48px; font-weight: bold; color: #333; }
-        .city-name { font-size: 20px; color: #666; margin-bottom: 10px; }
-        .message { font-size: 18px; margin-top: 10px; font-weight: bold; }
+        /* Подсветка мыши */
+        .glass-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: -1;
+            background: radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(255, 255, 255, 0.35), transparent 40%);
+            opacity: 0; transition: opacity 0.5s ease;
+        }
+        .glass-card:hover::before { opacity: 1; }
+        .glass-card:hover { transform: translateY(-3px); box-shadow: 0 15px 45px rgba(0,0,0,0.25); }
+
+        /* --- АНИМАЦИЯ ЖЕЛЕ (LIQUID SHAKE) --- */
+        /* Применяется к карточке, инпуту и кнопке */
+        .jelly-active {
+            animation: liquidShake 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+
+        @keyframes liquidShake {
+            0% { transform: scale(1); }
+            30% { transform: scale(1.08, 0.92); } /* Сплющивание */
+            50% { transform: scale(0.95, 1.05); } /* Растягивание */
+            70% { transform: scale(1.02, 0.98); }
+            100% { transform: scale(1); }
+        }
+
+        /* --- 3. ИНТЕРФЕЙС --- */
+        .interface-container { display: flex; flex-direction: column; gap: 20px; z-index: 50; }
+        .card-main { padding: 30px; }
+
+        /* Поле ввода и Кнопка */
+        .input-group { display: flex; gap: 10px; margin-bottom: 5px; position: relative; z-index: 2; }
         
-        /* Иконки статуса */
-        .icon { font-size: 60px; margin: 10px 0; }
+        input { 
+            flex: 1; padding: 12px 15px; border-radius: 12px; 
+            border: 1px solid rgba(255, 255, 255, 0.3); 
+            background: rgba(255, 255, 255, 0.2); 
+            color: #333; font-size: 16px; outline: none; 
+            transition: background 0.3s, box-shadow 0.3s; /* Убрал transform из transition, чтобы не конфликтовал с jelly */
+            backdrop-filter: blur(5px); 
+        }
+        input:focus { background: rgba(255, 255, 255, 0.5); box-shadow: 0 0 15px rgba(255, 255, 255, 0.3); }
         
-        /* Анимация Дождя */
-        .rain-drop {
-            position: absolute;
-            background-color: rgba(255, 255, 255, 0.6);
-            width: 2px;
-            height: 15px;
-            top: -20px;
-            animation: fall linear infinite;
+        button { 
+            padding: 12px 18px; border-radius: 12px; 
+            border: 1px solid rgba(255,255,255,0.4); 
+            background: rgba(255, 255, 255, 0.3); 
+            color: #fff; font-size: 18px; cursor: pointer; 
+            transition: background 0.3s; 
+            font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.1); 
+        }
+        button:hover { background: rgba(255, 255, 255, 0.6); }
+
+        /* Раскрытие информации (Liquid Reveal) */
+        .weather-info {
+            max-height: 0; opacity: 0; overflow: hidden; transform: translateY(-10px); filter: blur(10px);
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .weather-info.visible {
+            max-height: 200px; opacity: 1; transform: translateY(0); filter: blur(0);
+            margin-top: 25px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.3);
         }
 
-        @keyframes fall {
-            to { transform: translateY(105vh); }
+        .card-advice {
+            padding: 20px; opacity: 0; transform: translateY(-20px) scale(0.9); filter: blur(15px);
+            transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); pointer-events: none;
+            border-left: 8px solid rgba(255, 255, 255, 0.5);
         }
+        .card-advice.visible { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); pointer-events: auto; }
 
-        /* Анимация Солнца */
-        .sun-ray {
-            position: absolute;
-            top: -100px; right: -100px;
-            width: 300px; height: 300px;
-            background: radial-gradient(circle, rgba(255,255,200,0.8) 0%, rgba(255,255,255,0) 70%);
-            animation: spin 20s linear infinite;
-            pointer-events: none;
-        }
-        @keyframes spin { 
-            from { transform: rotate(0deg); } to { transform: rotate(360deg); } 
-        }
+        h1 { margin: 0 0 20px 0; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.1); font-weight: 600; letter-spacing: 1px; }
+        .city-label { font-size: 18px; color: rgba(0, 0, 0, 0.7); font-weight: 500; margin-bottom: 5px; }
+        .temp { font-size: 64px; font-weight: 800; letter-spacing: -2px; background: -webkit-linear-gradient(#fff, #eee); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 10px 20px rgba(0,0,0,0.15); }
+        .advice-title { font-size: 22px; font-weight: bold; margin-bottom: 5px; display: block; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .advice-desc { color: rgba(0, 0, 0, 0.6); font-size: 15px; font-weight: 500; }
 
+        /* --- 4. ПЕЙЗАЖ --- */
+        .landscape { position: absolute; bottom: 0; left: 0; width: 100%; height: 400px; pointer-events: none; z-index: 10; }
+        .mountain { position: absolute; bottom: 0; width: 0; height: 0; border-left: 150px solid transparent; border-right: 150px solid transparent; border-bottom: 250px solid #95a5a6; z-index: 1; transition: border-bottom-color 1.5s ease; }
+        .m1 { left: -50px; bottom: 50px; transform: scale(1.2); border-bottom-color: #7f8c8d; }
+        .m2 { left: 15%; bottom: 40px; transform: scale(0.8); border-bottom-color: #bdc3c7; }
+        .m3 { right: 0; bottom: 60px; transform: scale(1.5); border-bottom-color: #95a5a6; }
+        .hill { position: absolute; border-radius: 50%; transition: background 1.5s ease; }
+        .hill-bg { width: 120vw; height: 500px; left: -10vw; bottom: -280px; background: linear-gradient(to top, #27ae60 20%, #2ecc71 100%); z-index: 2; }
+        .hill-fg { width: 140vw; height: 400px; right: -20vw; bottom: -250px; background: linear-gradient(to top, #1e8449 20%, #27ae60 100%); z-index: 3; box-shadow: 0 -10px 50px rgba(0,0,0,0.1); }
+        .tree-container { position: absolute; bottom: 130px; z-index: 4; transition: transform 1.5s ease; }
+        .trunk { width: 10px; height: 20px; background: #5d4037; margin: 0 auto; }
+        .foliage { width: 0; height: 0; border-left: 25px solid transparent; border-right: 25px solid transparent; border-bottom: 80px solid #145a32; margin-bottom: -10px; position: relative; transition: border-bottom-color 1.5s ease; }
+        .foliage::after { content: ''; position: absolute; left: 0; top: 0; border-left: 0 solid transparent; border-right: 25px solid transparent; border-bottom: 80px solid rgba(0,0,0,0.1); width: 0; height: 0; transform: translate(-50%, 0); margin-left: 0; margin-top: 0; }
+        .tc1 { left: 5%; bottom: 120px; transform: scale(0.8); } .tc2 { left: 15%; bottom: 100px; transform: scale(1.1); } .tc3 { left: 25%; bottom: 140px; transform: scale(0.6); } .tc4 { right: 10%; bottom: 110px; transform: scale(1.0); } .tc5 { right: 25%; bottom: 130px; transform: scale(0.7); } .tc6 { right: 35%; bottom: 90px; transform: scale(1.2); }
+
+        body.stormy .mountain { border-bottom-color: #2c3e50; }
+        body.stormy .hill-bg { background: linear-gradient(to top, #1a252f, #2c3e50); }
+        body.stormy .hill-fg { background: linear-gradient(to top, #000, #1a252f); }
+        body.stormy .trunk { background: #222; }
+        body.stormy .foliage { border-bottom-color: #0d2315; }
+        body.snowy .mountain { border-bottom-color: #ecf0f1; }
+        body.snowy .hill-bg { background: linear-gradient(to top, #bdc3c7, #ecf0f1); }
+        body.snowy .hill-fg { background: linear-gradient(to top, #95a5a6, #bdc3c7); }
+        body.snowy .trunk { background: #444; }
+        body.snowy .foliage { border-bottom-color: #7f8c8d; }
+
+        /* --- 5. ЭФФЕКТЫ --- */
+        #sunSystem { position: absolute; top: 50px; right: 50px; width: 150px; height: 150px; z-index: 5; pointer-events: none; transition: opacity 1s, transform 1s; }
+        .the-sun { width: 100px; height: 100px; background: radial-gradient(circle at 30% 30%, #ffd700, #f1c40f); border-radius: 50%; position: absolute; top: 25px; left: 25px; box-shadow: 0 0 40px #f39c12; animation: sunPulse 4s ease-in-out infinite; }
+        .sun-rays-ring { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: repeating-conic-gradient(from 0deg, rgba(255, 215, 0, 0) 0deg, rgba(255, 215, 0, 0.3) 10deg, rgba(255, 215, 0, 0) 20deg); border-radius: 50%; animation: sunSpin 20s linear infinite; }
+        @keyframes sunSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes sunPulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        body.stormy #sunSystem, body.snowy #sunSystem { opacity: 0; transform: translateY(-100px); }
+
+        .rain-drop { position: absolute; background-color: rgba(255, 255, 255, 0.4); width: 2px; height: 20px; top: -50px; animation: fall linear infinite; z-index: 20; }
+        .snow-flake { position: absolute; background-color: white; border-radius: 50%; top: -10px; animation: fall linear infinite; z-index: 20; }
+        @keyframes fall { to { transform: translateY(110vh); } }
+        .cloud { position: absolute; background: #ecf0f1; border-radius: 100px; opacity: 0.8; z-index: 15; animation: drift linear infinite; backdrop-filter: blur(2px); }
+        .cloud.dark { background: #58636d; opacity: 0.8; }
+        .cloud::after, .cloud::before { content: ''; position: absolute; background: inherit; z-index: -1; }
+        .cloud::after { width: 40%; height: 40%; top: -20%; left: 15%; border-radius: 50%; } .cloud::before { width: 60%; height: 60%; top: -35%; right: 15%; border-radius: 50%; }
+        @keyframes drift { from { transform: translateX(-200px); } to { transform: translateX(110vw); } }
+        .flash-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: white; opacity: 0; pointer-events: none; z-index: 30; }
+        .flashing { animation: lightning 0.8s ease-out; }
+        @keyframes lightning { 0% { opacity: 0; } 10% { opacity: 0.7; } 100% { opacity: 0; } }
     </style>
 </head>
 <body id="mainBody">
 
-    <!-- Солнечный луч -->
-    <div class="sun-ray" id="sunRay"></div>
+    <div id="sunSystem"><div class="sun-rays-ring"></div><div class="the-sun"></div></div>
+    <div id="cloudsContainer"></div>
+    <div id="precipContainer"></div>
+    <div class="flash-overlay" id="flashOverlay"></div>
     
-    <!-- Контейнер для капель дождя -->
-    <div id="rainContainer"></div>
+    <div class="landscape">
+        <div class="mountain m1"></div><div class="mountain m2"></div><div class="mountain m3"></div>
+        <div class="hill hill-bg"></div><div class="hill hill-fg"></div>
+        <div class="tree-container tc1"><div class="foliage"></div><div class="trunk"></div></div>
+        <div class="tree-container tc2"><div class="foliage"></div><div class="trunk"></div></div>
+        <div class="tree-container tc3"><div class="foliage"></div><div class="trunk"></div></div>
+        <div class="tree-container tc4"><div class="foliage"></div><div class="trunk"></div></div>
+        <div class="tree-container tc5"><div class="foliage"></div><div class="trunk"></div></div>
+        <div class="tree-container tc6"><div class="foliage"></div><div class="trunk"></div></div>
+    </div>
 
-    <div class="card">
-        <h1>🌤️ Брать ли зонт?</h1>
-        <div>
-            <input type="text" id="cityInput" placeholder="Введите город..." value="Moscow">
-            <button onclick="checkWeather()">🔍</button>
+    <div class="interface-container">
+        
+        <!-- CARD 1 -->
+        <!-- onclick="triggerJelly(this)" запускает желе на самой карточке при клике на фон -->
+        <div class="glass-card card-main" onclick="triggerJelly(this)">
+            <h1>🌤️ UmbrellaAI</h1>
+            <div class="input-group">
+                <!-- ВАЖНО: onclick="triggerJelly(this); event.stopPropagation()" 
+                     запускает желе только на инпуте и не дает сработать желе на карточке -->
+                <input type="text" id="cityInput" list="cities" placeholder="Поиск города..." 
+                       oninput="handleInput(this.value)" autocomplete="off"
+                       onclick="triggerJelly(this); event.stopPropagation()">
+                
+                <button onclick="checkWeather(); triggerJelly(this); event.stopPropagation()">➔</button>
+            </div>
+            <datalist id="cities"></datalist>
+
+            <div class="weather-info" id="weatherInfo">
+                <div class="city-label" id="cityName">Город</div>
+                <div class="temp"><span id="tempVal">0</span>°</div>
+            </div>
         </div>
 
-        <div class="result-box" id="resultBox">
-            <div class="city-name" id="cityName">Москва</div>
-            <div class="icon" id="weatherIcon">☀️</div>
-            <div class="temp"><span id="tempVal">0</span>°C</div>
-            <div class="message" id="messageText">Загрузка...</div>
-            <p style="font-size: 14px; color: #777;">Вероятность дождя: <span id="probVal">0</span>%</p>
+        <!-- CARD 2 -->
+        <div class="glass-card card-advice" id="adviceCard" onclick="triggerJelly(this)">
+            <span class="advice-title" id="adviceTitle">Загрузка...</span>
+            <span class="advice-desc">Вероятность осадков: <span id="probVal">0</span>%</span>
         </div>
+
     </div>
 
     <script>
-        // --- ЛОГИКА (JavaScript) ---
-        
+        // --- 1. АНИМАЦИЯ ЖЕЛЕ (Универсальная) ---
+        function triggerJelly(element) {
+            // Удаляем класс (сброс)
+            element.classList.remove('jelly-active');
+            // Принудительный пересчет (Reflow)
+            void element.offsetWidth;
+            // Добавляем класс
+            element.classList.add('jelly-active');
+        }
+
+        // --- 2. ПОДСВЕТКА МЫШИ (Только для карточек) ---
+        document.querySelectorAll('.glass-card').forEach(card => {
+            card.addEventListener('mousemove', e => {
+                const rect = card.getBoundingClientRect();
+                card.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+                card.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
+            });
+        });
+
+        // --- ЛОГИКА ---
+        let debounceTimer;
+        async function handleInput(query) {
+            if (query.length < 2) return;
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(async () => { await fetchCities(query); }, 300);
+        }
+        async function fetchCities(query) {
+            const dl = document.getElementById('cities');
+            try {
+                const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${query}&count=5&language=ru&format=json`);
+                const data = await res.json();
+                dl.innerHTML = '';
+                if (data.results) data.results.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.name; opt.label = c.name + (c.country ? ` (${c.country})` : '');
+                    dl.appendChild(opt);
+                });
+            } catch(e) {}
+        }
+
         async function checkWeather() {
             const city = document.getElementById('cityInput').value;
             const btn = document.querySelector('button');
-            const resultBox = document.getElementById('resultBox');
-            
-            // Анимация загрузки
-            btn.textContent = "⏳";
-            btn.disabled = true;
+            const infoBlock = document.getElementById('weatherInfo');
+            const adviceCard = document.getElementById('adviceCard');
+
+            if(!city) return;
+            btn.disabled = true; 
 
             try {
-                // Запрос к нашему Flask серверу
-                const response = await fetch(`/predict?city=${city}`);
-                const data = await response.json();
+                const res = await fetch(`/predict?city=${city}`);
+                const data = await res.json();
+                if (data.error) { alert(data.error); return; }
 
-                if (data.error) {
-                    alert(data.error);
-                    return;
-                }
-
-                // Обновляем данные на странице
                 document.getElementById('cityName').textContent = data.city;
-                document.getElementById('tempVal').textContent = data.temp;
+                document.getElementById('tempVal').textContent = Math.round(data.temp);
                 document.getElementById('probVal').textContent = data.prob;
                 
-                resultBox.style.display = 'block';
+                infoBlock.classList.add('visible');
+                setTimeout(() => { adviceCard.classList.add('visible'); }, 200);
 
-                // Меняем состояние (Дождь vs Солнце)
-                setWeatherState(data.rain_predicted, data.desc);
-
-            } catch (error) {
-                alert("Ошибка соединения с сервером");
-            } finally {
-                btn.textContent = "🔍";
-                btn.disabled = false;
-            }
+                setWeatherState(data.rain_predicted, data.temp);
+            } catch (e) { alert("Ошибка сервера"); } 
+            finally { btn.disabled = false; }
         }
 
-        function setWeatherState(isRaining, desc) {
+        let precipInterval, cloudInterval, lightningTimeout;
+
+        function setWeatherState(hasPrecipitation, temp) {
             const body = document.getElementById('mainBody');
-            const rainContainer = document.getElementById('rainContainer');
-            const sunRay = document.getElementById('sunRay');
-            const icon = document.getElementById('weatherIcon');
-            const msg = document.getElementById('messageText');
+            const adviceCard = document.getElementById('adviceCard');
+            const adviceTitle = document.getElementById('adviceTitle');
+            
+            stopAllEffects();
+            adviceTitle.style.color = "#fff";
 
-            msg.textContent = desc;
-
-            if (isRaining) {
-                // РЕЖИМ ДОЖДЯ
-                body.classList.add('rainy');
-                sunRay.style.display = 'none';
-                icon.textContent = '☔';
-                msg.style.color = '#4a69bd';
-                createRain(); // Запускаем анимацию капель
+            if (hasPrecipitation) {
+                if (temp < 0) {
+                    body.className = 'snowy';
+                    adviceTitle.textContent = "🌨️ Ожидается снег";
+                    adviceCard.style.borderLeftColor = "#00d2ff"; 
+                    startSnow(); startClouds(false);
+                } else {
+                    body.className = 'stormy';
+                    adviceTitle.textContent = "☔ Бери зонт!";
+                    adviceCard.style.borderLeftColor = "#3a7bd5"; 
+                    startRain(); startClouds(true); startLightning();
+                }
             } else {
-                // РЕЖИМ СОЛНЦА
-                body.classList.remove('rainy');
-                sunRay.style.display = 'block';
-                icon.textContent = '☀️';
-                msg.style.color = '#e58e26';
-                clearRain(); // Убираем капли
+                body.className = '';
+                adviceTitle.textContent = "☀️ Зонт не нужен";
+                adviceCard.style.borderLeftColor = "#f1c40f"; 
             }
         }
 
-        // Функция создания капель дождя
-        let rainInterval;
-        function createRain() {
-            clearRain();
-            const container = document.getElementById('rainContainer');
-            
-            rainInterval = setInterval(() => {
-                const drop = document.createElement('div');
-                drop.classList.add('rain-drop');
-                drop.style.left = Math.random() * 100 + "vw"; // Случайная позиция
-                drop.style.animationDuration = Math.random() * 0.5 + 0.5 + "s"; // Случайная скорость
-                drop.style.opacity = Math.random();
-                
-                container.appendChild(drop);
-
-                // Удаляем каплю, когда она упала, чтобы не перегружать память
-                setTimeout(() => {
-                    drop.remove();
-                }, 1000);
-            }, 50); // Частота появления капель
+        function stopAllEffects() {
+            clearInterval(precipInterval); clearInterval(cloudInterval); clearTimeout(lightningTimeout);
+            document.getElementById('precipContainer').innerHTML = '';
+            document.getElementById('cloudsContainer').innerHTML = '';
         }
-
-        function clearRain() {
-            clearInterval(rainInterval);
-            document.getElementById('rainContainer').innerHTML = '';
+        function startRain() {
+            const cont = document.getElementById('precipContainer');
+            precipInterval = setInterval(() => {
+                const drop = document.createElement('div'); drop.classList.add('rain-drop');
+                drop.style.left = Math.random() * 100 + "vw"; drop.style.animationDuration = (Math.random() * 0.5 + 0.4) + "s"; drop.style.opacity = Math.random();
+                cont.appendChild(drop); setTimeout(() => drop.remove(), 900);
+            }, 20);
+        }
+        function startSnow() {
+            const cont = document.getElementById('precipContainer');
+            precipInterval = setInterval(() => {
+                const flake = document.createElement('div'); flake.classList.add('snow-flake');
+                const size = Math.random() * 5 + 3 + "px"; flake.style.width = size; flake.style.height = size;
+                flake.style.left = Math.random() * 100 + "vw"; flake.style.animationDuration = (Math.random() * 5 + 3) + "s"; flake.style.opacity = Math.random() * 0.7 + 0.3;
+                cont.appendChild(flake); setTimeout(() => flake.remove(), 8000);
+            }, 50);
+        }
+        function startClouds(isDark) {
+            const cont = document.getElementById('cloudsContainer');
+            for(let i=0; i<3; i++) spawnCloud(cont, isDark, true);
+            cloudInterval = setInterval(() => spawnCloud(cont, isDark, false), 6000);
+        }
+        function spawnCloud(c, d, r) {
+            const cl = document.createElement('div'); cl.classList.add('cloud'); if(d) cl.classList.add('dark');
+            const w = Math.random() * 200 + 150; cl.style.width = w + "px"; cl.style.height = (w * 0.35) + "px";
+            cl.style.top = (Math.random() * 30) + "vh"; cl.style.animationDuration = (Math.random() * 20 + 20) + "s";
+            if (r) cl.style.left = (Math.random() * 100) + "vw"; else cl.style.left = -300 + "px";
+            c.appendChild(cl); setTimeout(() => cl.remove(), parseFloat(cl.style.animationDuration) * 1000);
+        }
+        function startLightning() {
+            const f = document.getElementById('flashOverlay');
+            const r = () => { f.classList.add('flashing'); setTimeout(() => f.classList.remove('flashing'), 800); lightningTimeout = setTimeout(r, Math.random() * 5000 + 3000); };
+            r();
         }
     </script>
 </body>
